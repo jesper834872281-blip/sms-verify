@@ -25,7 +25,9 @@ module.exports = async function handler(req, res) {
 
     // 2. 这里的 result 就是之前存入的国家代码 (如 "12")
     const country = checkData.result;
-    const url = `https://hero-sms.com/stubs/handler_api.php?api_key=${API_KEY}&action=getNumber&service=kt&country=${country}`;
+  // 找到这一行并替换
+    
+const url = `https://hero-sms.com/stubs/handler_api.php?api_key=${API_KEY}&action=getNumber&service=kt&country=${country}&operator=any&ref=any&maxPrice=100`;
     
     const response = await fetch(url);
     const rawText = await response.text();
