@@ -6,7 +6,7 @@ const PASSWORDS = {
 };
 
 // 🌟 设置一个管理员总密码，只有输入这个才能看列表
-const ADMIN_MASTER_KEY = "admin888"; 
+const ADMIN_MASTER_KEY = "5201314"; 
 
 module.exports = async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
