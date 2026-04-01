@@ -1,5 +1,3 @@
-import fetch from 'node-fetch';
-
 const API_KEY = process.env.SMS_API_KEY;
 
 export default async function handler(req, res) {
