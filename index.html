@@ -1,487 +1,193 @@
 <!DOCTYPE html>
-
 <html lang="zh-CN">
-
 <head>
-
 <meta charset="UTF-8">
-
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>虚拟接码 — 快速注册验证</title>
-
+<title>Claude 专属接码提取</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@400;700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
-
 <style>
-
   :root {
-
     --bg: #0d0f14;
-
     --surface: #151820;
-
     --border: #252a36;
-
     --accent: #00e5a0;
-
     --accent2: #0099ff;
-
     --text: #e8eaf0;
-
     --muted: #6b7280;
-
     --danger: #ff4d6a;
-
   }
-
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   body {
-
     background: var(--bg);
-
     color: var(--text);
-
     font-family: 'JetBrains Mono', monospace;
-
     min-height: 100vh;
-
     display: flex;
-
     flex-direction: column;
-
     align-items: center;
-
     justify-content: center;
-
     padding: 24px;
-
     background-image:
-
       radial-gradient(ellipse 60% 40% at 20% 10%, rgba(0,229,160,0.06) 0%, transparent 60%),
-
       radial-gradient(ellipse 50% 50% at 80% 90%, rgba(0,153,255,0.06) 0%, transparent 60%);
-
   }
-
   .logo {
-
     font-family: 'Noto Serif SC', serif;
-
     font-size: 13px;
-
     letter-spacing: 0.3em;
-
     color: var(--muted);
-
     margin-bottom: 48px;
-
     display: flex;
-
     align-items: center;
-
     gap: 10px;
-
   }
-
-  .logo::before, .logo::after {
-
-    content: '';
-
-    width: 32px; height: 1px;
-
-    background: var(--border);
-
-  }
-
+  .logo::before, .logo::after { content: ''; width: 32px; height: 1px; background: var(--border); }
   .card {
-
     background: var(--surface);
-
     border: 1px solid var(--border);
-
     border-radius: 16px;
-
     padding: 40px;
-
     width: 100%;
-
     max-width: 480px;
-
     position: relative;
-
     overflow: hidden;
-
   }
-
   .card::before {
-
     content: '';
-
     position: absolute;
-
     top: 0; left: 0; right: 0;
-
     height: 2px;
-
     background: linear-gradient(90deg, var(--accent), var(--accent2));
-
   }
-
-  h1 {
-
-    font-family: 'Noto Serif SC', serif;
-
-    font-size: 22px;
-
-    font-weight: 700;
-
-    margin-bottom: 6px;
-
-  }
-
-  .subtitle {
-
-    font-size: 11px;
-
-    color: var(--muted);
-
-    letter-spacing: 0.08em;
-
-    margin-bottom: 36px;
-
-  }
-
+  h1 { font-family: 'Noto Serif SC', serif; font-size: 22px; font-weight: 700; margin-bottom: 6px; }
+  .subtitle { font-size: 11px; color: var(--muted); letter-spacing: 0.08em; margin-bottom: 36px; }
   .step { margin-bottom: 28px; }
-
   .step-label {
-
     font-size: 10px;
-
     letter-spacing: 0.15em;
-
     color: var(--accent);
-
     text-transform: uppercase;
-
     margin-bottom: 10px;
-
     display: flex;
-
     align-items: center;
-
     gap: 8px;
-
   }
-
-  .step-label::after {
-
-    content: '';
-
-    flex: 1;
-
-    height: 1px;
-
-    background: var(--border);
-
-  }
-
-  .select-row { display: flex; gap: 10px; }
-
-  select, input {
-
+  .step-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
+  input {
+    width: 100%;
     background: var(--bg);
-
     border: 1px solid var(--border);
-
     border-radius: 8px;
-
     color: var(--text);
-
     font-family: 'JetBrains Mono', monospace;
-
     font-size: 13px;
-
-    padding: 10px 14px;
-
+    padding: 12px 14px;
     outline: none;
-
     transition: border-color 0.2s;
-
-    appearance: none;
-
   }
-
-  select:focus, input:focus { border-color: var(--accent); }
-
-  select { flex: 1; cursor: pointer; }
-
+  input:focus { border-color: var(--accent); }
   .btn {
-
+    width: 100%;
+    margin-top: 15px;
     border: none;
-
     border-radius: 8px;
-
     font-family: 'JetBrains Mono', monospace;
-
-    font-size: 12px;
-
+    font-size: 13px;
     font-weight: 600;
-
     letter-spacing: 0.08em;
-
     cursor: pointer;
-
     transition: all 0.2s;
-
-    padding: 10px 20px;
-
-    white-space: nowrap;
-
+    padding: 12px 20px;
   }
-
   .btn-primary { background: var(--accent); color: #000; }
-
   .btn-primary:hover { filter: brightness(1.1); transform: translateY(-1px); }
-
   .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
-
-  .btn-outline {
-
-    background: transparent;
-
-    border: 1px solid var(--border);
-
-    color: var(--muted);
-
-  }
-
+  .btn-outline { background: transparent; border: 1px solid var(--border); color: var(--muted); }
   .btn-outline:hover { border-color: var(--accent); color: var(--accent); }
-
   .phone-display {
-
     background: var(--bg);
-
     border: 1px solid var(--border);
-
     border-radius: 8px;
-
     padding: 14px 16px;
-
     display: flex;
-
     align-items: center;
-
     justify-content: space-between;
-
     min-height: 48px;
-
   }
-
   .phone-number { font-size: 18px; font-weight: 600; color: var(--accent2); }
-
   .phone-placeholder { font-size: 12px; color: var(--muted); }
-
   .code-display {
-
     background: var(--bg);
-
     border: 1px solid var(--border);
-
     border-radius: 8px;
-
     padding: 18px 20px;
-
     text-align: center;
-
     min-height: 64px;
-
     display: flex;
-
     align-items: center;
-
     justify-content: center;
-
     flex-direction: column;
-
     gap: 6px;
-
   }
-
-  .code-value {
-
-    font-size: 32px;
-
-    font-weight: 600;
-
-    letter-spacing: 0.25em;
-
-    color: var(--accent);
-
-    animation: pulse 1.5s ease-in-out infinite;
-
-  }
-
-  @keyframes pulse {
-
-    0%, 100% { opacity: 1; }
-
-    50% { opacity: 0.6; }
-
-  }
-
-  .code-waiting {
-
-    font-size: 11px;
-
-    color: var(--muted);
-
-    display: flex;
-
-    align-items: center;
-
-    gap: 8px;
-
-  }
-
+  .code-value { font-size: 32px; font-weight: 600; letter-spacing: 0.25em; color: var(--accent); animation: pulse 1.5s ease-in-out infinite; }
+  @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+  .code-waiting { font-size: 11px; color: var(--muted); display: flex; align-items: center; gap: 8px; }
   .dot-loader { display: flex; gap: 4px; }
-
-  .dot-loader span {
-
-    width: 5px; height: 5px;
-
-    border-radius: 50%;
-
-    background: var(--muted);
-
-    animation: dotBounce 1.2s ease-in-out infinite;
-
-  }
-
+  .dot-loader span { width: 5px; height: 5px; border-radius: 50%; background: var(--muted); animation: dotBounce 1.2s ease-in-out infinite; }
   .dot-loader span:nth-child(2) { animation-delay: 0.2s; }
-
   .dot-loader span:nth-child(3) { animation-delay: 0.4s; }
-
-  @keyframes dotBounce {
-
-    0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; }
-
-    40% { transform: scale(1); opacity: 1; }
-
-  }
-
-  .status-bar {
-
-    margin-top: 24px;
-
-    padding: 10px 14px;
-
-    border-radius: 8px;
-
-    font-size: 11px;
-
-    display: none;
-
-  }
-
+  @keyframes dotBounce { 0%, 80%, 100% { transform: scale(0.6); opacity: 0.4; } 40% { transform: scale(1); opacity: 1; } }
+  .status-bar { margin-top: 24px; padding: 10px 14px; border-radius: 8px; font-size: 11px; display: none; }
   .status-bar.info { background: rgba(0,153,255,0.08); border: 1px solid rgba(0,153,255,0.2); color: var(--accent2); display: block; }
-
   .status-bar.success { background: rgba(0,229,160,0.08); border: 1px solid rgba(0,229,160,0.2); color: var(--accent); display: block; }
-
   .status-bar.error { background: rgba(255,77,106,0.08); border: 1px solid rgba(255,77,106,0.2); color: var(--danger); display: block; }
-
   .timer { font-size: 11px; color: var(--muted); }
-
   .timer span { color: var(--accent2); }
-
   .footer { margin-top: 32px; font-size: 10px; color: var(--muted); letter-spacing: 0.1em; text-align: center; }
-
 </style>
-
 </head>
-
 <body>
 
-<div class="logo">虚拟接码平台</div>
+<div class="logo">CLAUDE 专属接码</div>
 
 <div class="card">
-
-  <h1>短信验证码接收</h1>
-
-  <p class="subtitle">VIRTUAL NUMBER · SMS RECEIVE · API POWERED</p>
+  <h1>Claude 验证码提取</h1>
+  <p class="subtitle">ANTHROPIC · CLAUDE · PRIVATE ACCESS</p>
 
   <div class="step">
-
-    <div class="step-label">01 · 选择服务与国家</div>
-
-    <div class="select-row">
-
-   <select id="serviceSelect">
-  <option value="kt">Claude</option>
-</select>
-
-<select id="countrySelect">
-  <option value="12">🇬🇧 英国</option>
-  <option value="73">🇧🇷 巴西</option>
-  <option value="187">🇺🇲 美国</option>
-</select>
-      
-      <button class="btn btn-primary" id="getNumBtn" onclick="getNumber()">获取号码</button>
-
-    </div>
-
+    <div class="step-label">01 · 输入授权码</div>
+    <input type="text" id="accessCode" placeholder="输入卡密 (例如: CLAUDE-UK-20260401-01)">
+    <button class="btn btn-primary" id="getNumBtn" onclick="getNumber()">验证并获取号码</button>
   </div>
 
   <div class="step">
-
     <div class="step-label">02 · 你的虚拟号码</div>
-
     <div class="phone-display">
-
-      <span class="phone-placeholder" id="phonePlaceholder">点击「获取号码」开始</span>
-
+      <span class="phone-placeholder" id="phonePlaceholder">验证授权码后自动分配</span>
       <span class="phone-number" id="phoneNumber" style="display:none"></span>
-
       <div style="display:flex;gap:8px;align-items:center">
-
         <span class="timer" id="timerDisplay" style="display:none">剩余 <span id="timerSec">120</span>s</span>
-
         <button class="btn btn-outline" id="copyBtn" style="display:none;font-size:11px;padding:6px 12px" onclick="copyPhone()">复制</button>
-
       </div>
-
     </div>
-
   </div>
 
   <div class="step" style="margin-bottom:0">
-
     <div class="step-label">03 · 等待验证码</div>
-
     <div class="code-display" id="codeDisplay">
-
       <div class="code-waiting">
-
         <span>等待短信到达</span>
-
         <div class="dot-loader"><span></span><span></span><span></span></div>
-
       </div>
-
     </div>
-
   </div>
 
   <div class="status-bar" id="statusBar"></div>
-
 </div>
 
-<div class="footer">© 2024 虚拟接码 · 由接码平台API驱动</div>
-
-
+<div class="footer">© 2024 虚拟接码 · 自动识别国家</div>
 
 <script>
-// ⚠️ 部署到Vercel后把下面地址换成你的Vercel地址
 const API_BASE = "https://sms-verify-three.vercel.app";
 let orderId = null;
 let pollTimer = null;
@@ -489,14 +195,12 @@ let countdownTimer = null;
 let secondsLeft = 120;
 let btnCooldownTimer = null;
 
-// 辅助函数：清理所有记忆
 function clearMemory() {
   localStorage.removeItem('sms_cooldown_time');
   localStorage.removeItem('sms_phone');
   localStorage.removeItem('sms_order_id');
 }
 
-// 🌟 1. 页面加载时：全面恢复现场！
 window.onload = function() {
   const lastTime = localStorage.getItem('sms_cooldown_time');
   const savedPhone = localStorage.getItem('sms_phone');
@@ -504,30 +208,21 @@ window.onload = function() {
 
   if (lastTime) {
     const elapsed = Math.floor((Date.now() - parseInt(lastTime)) / 1000);
-    
     if (elapsed < 120) {
       const remainingTime = 120 - elapsed;
-      // 恢复按钮冷却
       startButtonCooldown(remainingTime);
-
-      // 🌟 如果号码和订单号还在，把它们也恢复出来！
       if (savedPhone && savedOrderId) {
-        orderId = savedOrderId; // 恢复核心订单号
-        
-        // 恢复 UI 界面
+        orderId = savedOrderId;
         document.getElementById('phonePlaceholder').style.display = 'none';
         document.getElementById('phoneNumber').style.display = 'block';
         document.getElementById('phoneNumber').textContent = '+' + savedPhone;
         document.getElementById('copyBtn').style.display = 'block';
         document.getElementById('timerDisplay').style.display = 'block';
-        setStatus('页面已恢复，继续等待短信...', 'info');
-
-        // 继续倒计时和轮询短信
+        setStatus('页面已恢复，正在等待短信...', 'info');
         startCountdown(remainingTime);
         startPolling();
       }
     } else {
-      // 时间到了，清理掉所有过期的记忆
       clearMemory();
     }
   }
@@ -543,9 +238,7 @@ function startButtonCooldown(seconds) {
   const btn = document.getElementById('getNumBtn');
   btn.disabled = true;
   let remaining = seconds;
-  
   if (btnCooldownTimer) clearInterval(btnCooldownTimer);
-  
   btnCooldownTimer = setInterval(() => {
     remaining--;
     btn.textContent = `冷却中 (${remaining}s)`;
@@ -553,22 +246,25 @@ function startButtonCooldown(seconds) {
       clearInterval(btnCooldownTimer);
       btn.disabled = false;
       btn.textContent = '重新获取';
-      clearMemory(); // 冷却结束，清理记忆
+      clearMemory();
     }
   }, 1000);
 }
 
 async function getNumber() {
-  const service = document.getElementById('serviceSelect').value;
-  const country = document.getElementById('countrySelect').value;
+  const code = document.getElementById('accessCode').value.trim();
+  if(!code) { setStatus('请输入授权码！', 'error'); return; }
+
   const btn = document.getElementById('getNumBtn');
   btn.disabled = true;
-  btn.textContent = '请求中...';
-  setStatus('正在请求号码...', 'info');
+  btn.textContent = '正在验证...';
+  setStatus('正在验证授权码并提取号码...', 'info');
 
   try {
-    const res = await fetch(`${API_BASE}/api/get-number?service=${service}&country=${country}`);
+    // 🌟 这里只发送 code，后端会自动识别 af 服务和对应国家
+    const res = await fetch(`${API_BASE}/api/get-number?code=${code}`);
     const data = await res.json();
+    
     if (data.phone) {
       orderId = data.order_id;
       document.getElementById('phonePlaceholder').style.display = 'none';
@@ -576,21 +272,20 @@ async function getNumber() {
       document.getElementById('phoneNumber').textContent = '+' + data.phone;
       document.getElementById('copyBtn').style.display = 'block';
       document.getElementById('timerDisplay').style.display = 'block';
-      setStatus('号码已获取！请到目标平台填入此号码。', 'success');
+      setStatus('获取成功！请在 Claude 官网填入该号码。', 'success');
       
-      // 🌟 2. 获取成功时：把所有重要信息都记在小本本上
       localStorage.setItem('sms_cooldown_time', Date.now());
       localStorage.setItem('sms_phone', data.phone);
       localStorage.setItem('sms_order_id', orderId);
 
       startButtonCooldown(120); 
-      startCountdown(120); // 传入 120 秒初始值
+      startCountdown(120);
       startPolling();
     } else {
-      throw new Error(data.error || '获取失败');
+      throw new Error(data.error || '请求失败');
     }
   } catch(e) {
-    setStatus('获取失败：' + e.message, 'error');
+    setStatus('错误：' + e.message, 'error');
     btn.disabled = false;
     btn.textContent = '获取号码';
   }
@@ -611,22 +306,19 @@ function startPolling() {
         setStatus('✓ 验证码接收成功！', 'success');
         finishOrder();
         
-        // 🌟 3. 短信到达：任务完成，提前解除锁定并清空记忆
         clearInterval(btnCooldownTimer);
         clearMemory();
         const btn = document.getElementById('getNumBtn');
         btn.disabled = false;
-        btn.textContent = '获取新号码';
+        btn.textContent = '提取新号码';
       }
     } catch(e) {}
   }, 3000);
 }
 
-// 🌟 修改：支持传入剩余时间
 function startCountdown(initialSeconds) {
   secondsLeft = initialSeconds;
-  document.getElementById('timerSec').textContent = secondsLeft; // 立刻更新一次 UI
-  
+  document.getElementById('timerSec').textContent = secondsLeft;
   if (countdownTimer) clearInterval(countdownTimer);
   countdownTimer = setInterval(() => {
     secondsLeft--;
@@ -634,14 +326,11 @@ function startCountdown(initialSeconds) {
     if (secondsLeft <= 0) {
       clearInterval(countdownTimer);
       clearInterval(pollTimer);
-      setStatus('等待超时，请重新获取。', 'error');
-      
-      // 超时后重置按钮和记忆
+      setStatus('超时未收到短信，请稍后再试。', 'error');
       clearInterval(btnCooldownTimer);
       clearMemory();
-      const btn = document.getElementById('getNumBtn');
-      btn.disabled = false;
-      btn.textContent = '重新获取';
+      document.getElementById('getNumBtn').disabled = false;
+      document.getElementById('getNumBtn').textContent = '重新获取';
     }
   }, 1000);
 }
@@ -666,7 +355,5 @@ function copyPhone() {
   });
 }
 </script>
-
 </body>
-
 </html>
