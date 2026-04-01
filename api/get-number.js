@@ -6,8 +6,8 @@ module.exports = async function handler(req, res) {
   // 接收前端传来的国家代码：英国(12), 巴西(73), 美国(187)
   const country = req.query.country || "12"; 
   
-  // 🌟 这里换回咱们测试出来的 Claude 专属代码
-  const service = "cza"; 
+  // 🌟 这里换成你刚刚确认的绝对正确的 Claude 专属代码：acz
+  const service = "acz"; 
 
   try {
     const url = `https://hero-sms.com/stubs/handler_api.php?api_key=${API_KEY}&action=getNumber&service=${service}&country=${country}`;
