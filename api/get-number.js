@@ -14,17 +14,21 @@ export default async function handler(req, res) {
   const service = req.query.service || "google";
   const country = req.query.country || "china";
 
-  try {
+try {
     const response = await fetch(
       `https://5sim.net/v1/user/buy/activation/${country}/any/${service}`,
       {
         headers: {
           "Authorization": `Bearer ${API_KEY}`,
-          "Accept": "application/json"
+          "Accept": "application/json",
+          // 下面是新增的伪装代码
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36",
+          "Accept-Language": "en-US,en;q=0.9,zh-CN;q=0.8,zh;q=0.7",
+          "Referer": "https://5sim.net/"
         }
       }
     );
-
+// ... 后面保持你现在的代码不变 ...
     // 【关键修改 1】先将返回结果作为纯文本读取，不要直接强转 JSON
     const rawText = await response.text();
 
