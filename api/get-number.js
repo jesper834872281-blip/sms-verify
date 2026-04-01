@@ -1,10 +1,9 @@
 import fetch from 'node-fetch';
-import { HttpsProxyAgent } from 'https-proxy-agent';
 
 const API_KEY = process.env.SMS_API_KEY;
-const PROXY_URL = process.env.PROXY_URL; // 从 Vercel 读取你的代理链接
 
 export default async function handler(req, res) {
+  // 允许跨域访问
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
@@ -13,49 +12,42 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  const service = req.query.service || "google";
-  const country = req.query.country || "china";
+  // 接收前端传来的参数
+  let service = req.query.service || "go";
+  let country = req.query.country || "3";
+
+  // 兼容你前端原来的 5sim 参数格式，自动转换成 Hero-SMS 的格式
+  // Hero-SMS 中：谷歌是 'go'，中国是 '3'
+  if (service.toLowerCase() === "google") service = "go";
+  if (country.toLowerCase() === "china" || country.toLowerCase() === "cn") country = "3";
 
   try {
-    // 创建代理引擎
-    const agent = PROXY_URL ? new HttpsProxyAgent(PROXY_URL) : undefined;
+    // Hero-SMS 的标准 API 链接 (极致简单，不需要任何 Headers 伪装)
+    const url = `https://hero-sms.com/stubs/handler_api.php?api_key=${API_KEY}&action=getNumber&service=${service}&country=${country}`;
+    
+    const response = await fetch(url);
+    const rawText = await response.text(); // 它返回的是纯文本，不是 JSON
+    
+    console.log(`=== Hero-SMS 接口返回 ===\n${rawText}`);
 
-    const response = await fetch(
-      `https://5sim.net/v1/user/buy/activation/${country}/any/${service}`,
-      {
-        agent: agent, // 穿上代理的“外衣”
-        headers: {
-          "Authorization": `Bearer ${API_KEY}`,
-          "Accept": "application/json",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/123.0.0.0 Safari/537.36"
-        }
-      }
-    );
-
-    const rawText = await response.text();
-    console.log(`=== 经过代理后的 HTTP 状态码: ${response.status} ===`);
-    console.log(`=== 5sim 返回内容 ===\n${rawText.substring(0, 500)}`);
-
-    let data;
-    try {
-      data = JSON.parse(rawText);
-    } catch (parseError) {
-      console.error("解析 JSON 失败，代理可能失效或仍被拦截！");
-      return res.status(502).json({ 
-        error: "请求 5sim 失败，返回了非预期数据（可能代理 IP 也被封了）",
-        status: response.status,
-        raw_response: rawText.substring(0, 200) 
-      });
+    // 成功的返回格式通常是：ACCESS_NUMBER:123456789:8613800000000
+    if (rawText.startsWith("ACCESS_NUMBER")) {
+      const parts = rawText.split(":");
+      const orderId = parts[1];
+      const phone = parts[2];
+      
+      // 完美返回给你的前端
+      res.status(200).json({ order_id: orderId, phone: phone });
+    } 
+    else if (rawText === "NO_NUMBERS") {
+      res.status(400).json({ error: "该国家/服务的号码暂时没库存了" });
     }
-
-    if (data.id) {
-      res.json({ order_id: String(data.id), phone: String(data.phone) });
-    } else {
-      res.status(400).json({ error: typeof data === 'string' ? data : JSON.stringify(data) });
+    else if (rawText === "NO_BALANCE") {
+      res.status(400).json({ error: "账号余额不足，请充值" });
     }
-
-  } catch (e) {
-    console.error("请求完全失败（检查代理是否存活）:", e);
-    res.status(500).json({ error: e.message });
-  }
-}
+    else if (rawText === "BAD_KEY") {
+      res.status(400).json({ error: "API 密钥错误，请检查 Vercel 环境变量" });
+    }
+    else {
+      // 其他报错
+      res.status(400).json({
