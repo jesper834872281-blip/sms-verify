@@ -15,9 +15,6 @@ module.exports = async function handler(req, res) {
   let service = req.query.service || "go";
   let country = req.query.country || "3";
 
-  // 兼容你前端原来的格式，自动转换成 Hero-SMS 的格式
-  if (service.toLowerCase() === "google") service = "go";
-  if (country.toLowerCase() === "china" || country.toLowerCase() === "cn") country = "3";
 
   try {
     // Hero-SMS 的标准 API 链接
