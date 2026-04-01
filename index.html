@@ -3,119 +3,153 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Claude 极速接码</title>
+<title>Claude 专属接码</title>
 <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+SC:wght@700&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
 <style>
   :root { --bg: #0d0f14; --surface: #151820; --border: #252a36; --accent: #00e5a0; --accent2: #0099ff; --text: #e8eaf0; --muted: #6b7280; --danger: #ff4d6a; }
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px; background-image: radial-gradient(ellipse 60% 40% at 20% 10%, rgba(0,229,160,0.06) 0%, transparent 60%); }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 30px; width: 100%; max-width: 440px; position: relative; }
+  body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; background-image: radial-gradient(ellipse 60% 40% at 20% 10%, rgba(0,229,160,0.06) 0%, transparent 60%), radial-gradient(ellipse 50% 50% at 80% 90%, rgba(0,153,255,0.06) 0%, transparent 60%); }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 40px; width: 100%; max-width: 480px; position: relative; overflow: hidden; }
   .card::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, var(--accent), var(--accent2)); }
-  h1 { font-family: 'Noto Serif SC', serif; font-size: 20px; margin-bottom: 4px; }
-  .subtitle { font-size: 10px; color: var(--muted); letter-spacing: 1px; margin-bottom: 30px; }
+  h1 { font-family: 'Noto Serif SC', serif; font-size: 22px; margin-bottom: 30px; text-align: center; }
   .step { margin-bottom: 24px; }
-  .step-label { font-size: 10px; color: var(--accent); text-transform: uppercase; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+  .step-label { font-size: 10px; color: var(--accent); text-transform: uppercase; margin-bottom: 10px; display: flex; align-items: center; gap: 8px; letter-spacing: 1px; }
   .step-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-  input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); font-size: 13px; padding: 12px; outline: none; transition: 0.2s; }
+  input, select { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: var(--text); padding: 12px; width: 100%; font-family: inherit; outline: none; transition: 0.2s; }
   input:focus { border-color: var(--accent); }
-  .btn { width: 100%; margin-top: 10px; border: none; border-radius: 8px; font-family: 'JetBrains Mono', monospace; font-size: 13px; font-weight: 600; cursor: pointer; transition: 0.2s; padding: 12px; }
+  .btn { width: 100%; padding: 14px; border-radius: 8px; border: none; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 10px; }
   .btn-primary { background: var(--accent); color: #000; }
-  .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
-  .phone-display { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 12px; display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
-  .phone-number { font-size: 18px; color: var(--accent2); font-weight: 600; }
-  .code-display { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; text-align: center; margin-top: 10px; }
-  .code-value { font-size: 32px; font-weight: 600; color: var(--accent); letter-spacing: 4px; }
+  .btn-primary:disabled { opacity: 0.4; cursor: not-allowed; }
+  .phone-display { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 15px; display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+  .code-display { background: var(--bg); border: 1px solid var(--border); border-radius: 8px; padding: 20px; text-align: center; min-height: 80px; display: flex; align-items: center; justify-content: center; font-size: 32px; color: var(--accent); font-weight: 600; letter-spacing: 4px; }
   .status-bar { margin-top: 20px; padding: 10px; border-radius: 8px; font-size: 11px; display: none; }
-  .status-bar.info { background: rgba(0,153,255,0.1); color: var(--accent2); display: block; }
-  .status-bar.error { background: rgba(255,77,106,0.1); color: var(--danger); display: block; }
+  .status-bar.info { display: block; background: rgba(0,153,255,0.1); color: var(--accent2); }
+  .status-bar.error { display: block; background: rgba(255,77,106,0.1); color: var(--danger); }
+  .status-bar.success { display: block; background: rgba(0,229,160,0.1); color: var(--accent); }
 </style>
 </head>
 <body>
 
 <div class="card">
   <h1>Claude 专属接码</h1>
-  <p class="subtitle">ONLY FOR CLAUDE (BR / UK)</p>
-
+  
   <div class="step">
-    <div class="step-label">01 · 输入授权码</div>
-    <input type="text" id="accessCode" placeholder="输入包含 BR 或 UK 的授权码">
-    <button class="btn btn-primary" id="getNumBtn" onclick="getNumber()">提取号码</button>
+    <div class="step-label">Step 01 · 身份验证</div>
+    <input type="text" id="accessCode" placeholder="请输入授权码">
+    <button class="btn btn-primary" id="getNumBtn" onclick="getNumber()">验证并获取号码</button>
   </div>
 
   <div class="step">
-    <div class="step-label">02 · 分配号码</div>
+    <div class="step-label">Step 02 · 虚拟号码</div>
     <div class="phone-display">
-      <span id="phoneShow" style="font-size:12px;color:var(--muted)">等待提取...</span>
-      <button id="copyBtn" style="display:none; background:none; border:1px solid var(--border); color:var(--text); padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer" onclick="copyText()">复制</button>
+      <span id="phoneVal" style="color:var(--muted)">等待获取...</span>
+      <span id="timerBox" style="font-size:11px; display:none">剩余 <span id="sec">120</span>s</span>
     </div>
   </div>
 
   <div class="step">
-    <div class="step-label">03 · 验证码</div>
-    <div class="code-display" id="codeBox">
-      <span style="font-size:12px;color:var(--muted)">等待短信...</span>
-    </div>
+    <div class="step-label">Step 03 · 验证码</div>
+    <div class="code-display" id="codeBox">--- ---</div>
   </div>
 
-  <div class="status-bar" id="statusBar"></div>
+  <div id="statusBar" class="status-bar"></div>
 </div>
 
 <script>
-const API_BASE = window.location.origin; // 自动获取当前域名
-let orderId = null;
+const API_BASE = window.location.origin;
+let pollTimer, cdTimer, btnCdTimer;
+
+// 页面加载恢复现场
+window.onload = () => {
+  const lastTime = localStorage.getItem('sms_time');
+  const code = localStorage.getItem('sms_code');
+  if (lastTime && (Date.now() - lastTime < 120000)) {
+    document.getElementById('accessCode').value = code;
+    restoreSession(120 - Math.floor((Date.now() - lastTime)/1000));
+  }
+};
+
+function setStatus(m, t) { const b = document.getElementById('statusBar'); b.textContent = m; b.className = 'status-bar ' + t; }
 
 async function getNumber() {
   const code = document.getElementById('accessCode').value.trim();
-  const btn = document.getElementById('getNumBtn');
-  if(!code) return alert('请输入码');
-
-  btn.disabled = true;
-  btn.textContent = '请求中...';
+  if (!code) return setStatus('请输入授权码', 'error');
   
+  const btn = document.getElementById('getNumBtn');
+  btn.disabled = true;
+  btn.textContent = '验证中...';
+
   try {
     const res = await fetch(`${API_BASE}/api/get-number?code=${code}`);
     const data = await res.json();
-    
     if (data.phone) {
-      orderId = data.order_id;
-      document.getElementById('phoneShow').innerHTML = `<span class="phone-number">+${data.phone}</span>`;
-      document.getElementById('copyBtn').style.display = 'block';
-      showStatus('获取成功，请在官网填入号码', 'info');
-      startPolling();
-    } else {
-      throw new Error(data.error);
-    }
+      localStorage.setItem('sms_time', Date.now());
+      localStorage.setItem('sms_code', code);
+      localStorage.setItem('sms_order', data.order_id);
+      localStorage.setItem('sms_num', data.phone);
+      
+      showNumber(data.phone, 120);
+      startPolling(data.order_id, code);
+      startBtnCd(120);
+      setStatus('获取成功！', 'success');
+    } else { throw new Error(data.error); }
   } catch(e) {
-    showStatus(e.message, 'error');
+    setStatus(e.message, 'error');
     btn.disabled = false;
-    btn.textContent = '提取号码';
+    btn.textContent = '重新尝试';
   }
 }
 
-function startPolling() {
-  const timer = setInterval(async () => {
+function showNumber(num, sec) {
+  document.getElementById('phoneVal').textContent = '+' + num;
+  document.getElementById('phoneVal').style.color = 'var(--accent2)';
+  document.getElementById('timerBox').style.display = 'block';
+  let s = sec;
+  if(cdTimer) clearInterval(cdTimer);
+  cdTimer = setInterval(() => {
+    s--; document.getElementById('sec').textContent = s;
+    if(s <= 0) { clearInterval(cdTimer); clearInterval(pollTimer); setStatus('已超时','error'); resetUI(); }
+  }, 1000);
+}
+
+function startPolling(oid, code) {
+  if(pollTimer) clearInterval(pollTimer);
+  pollTimer = setInterval(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/get-sms?order_id=${orderId}`);
+      const res = await fetch(`${API_BASE}/api/get-sms?order_id=${oid}&code=${code}`);
       const data = await res.json();
       if (data.status === 'ok') {
-        clearInterval(timer);
-        document.getElementById('codeBox').innerHTML = `<div class="code-value">${data.code}</div>`;
-        showStatus('✓ 验证码已送达', 'info');
+        clearInterval(pollTimer); clearInterval(cdTimer); clearInterval(btnCdTimer);
+        document.getElementById('codeBox').textContent = data.code;
+        setStatus('验证码已送达！授权码已核销。', 'success');
+        localStorage.clear();
+        document.getElementById('getNumBtn').disabled = false;
+        document.getElementById('getNumBtn').textContent = '获取新号码';
       }
     } catch(e) {}
   }, 4000);
 }
 
-function showStatus(msg, type) {
-  const bar = document.getElementById('statusBar');
-  bar.textContent = msg;
-  bar.className = 'status-bar ' + type;
+function startBtnCd(s) {
+  const btn = document.getElementById('getNumBtn');
+  let r = s;
+  if(btnCdTimer) clearInterval(btnCdTimer);
+  btnCdTimer = setInterval(() => {
+    r--; btn.textContent = `冷却中(${r}s)`;
+    if(r <= 0) { clearInterval(btnCdTimer); btn.disabled = false; btn.textContent = '获取号码'; }
+  }, 1000);
 }
 
-function copyText() {
-  const num = document.querySelector('.phone-number').textContent;
-  navigator.clipboard.writeText(num);
-  alert('已复制');
+function restoreSession(s) {
+  showNumber(localStorage.getItem('sms_num'), s);
+  startPolling(localStorage.getItem('sms_order'), localStorage.getItem('sms_code'));
+  startBtnCd(s);
+}
+
+function resetUI() {
+  localStorage.clear();
+  document.getElementById('getNumBtn').disabled = false;
+  document.getElementById('getNumBtn').textContent = '获取号码';
 }
 </script>
 </body>
