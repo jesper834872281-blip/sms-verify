@@ -1,5 +1,4 @@
 const API_KEY = process.env.SMS_API_KEY;
-const BASE_URL = "https://api.sms-activate.org/stubs/handler_api.php";
 
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
@@ -8,16 +7,20 @@ export default async function handler(req, res) {
 
   try {
     const response = await fetch(
-      `${BASE_URL}?api_key=${API_KEY}&action=getStatus&id=${order_id}`
+      `https://5sim.net/v1/user/check/${order_id}`,
+      {
+        headers: {
+          "Authorization": `Bearer ${API_KEY}`,
+          "Accept": "application/json"
+        }
+      }
     );
-    const text = await response.text();
+    const data = await response.json();
 
-    if (text.startsWith("STATUS_OK")) {
-      res.json({ status: "ok", code: text.split(":")[1].trim() });
-    } else if (text === "STATUS_WAIT_CODE") {
-      res.json({ status: "waiting" });
+    if (data.sms && data.sms.length > 0) {
+      res.json({ status: "ok", code: data.sms[0].code });
     } else {
-      res.json({ status: "error", msg: text });
+      res.json({ status: "waiting" });
     }
   } catch (e) {
     res.status(500).json({ status: "error", msg: e.message });
