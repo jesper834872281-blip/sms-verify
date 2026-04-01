@@ -1,6 +1,7 @@
 const API_KEY = process.env.SMS_API_KEY;
 
-export default async function handler(req, res) {
+// 注意这里换成了最原始的 module.exports 老语法，保证 Vercel 绝对认识！
+module.exports = async function handler(req, res) {
   // 允许跨域访问
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
@@ -14,27 +15,26 @@ export default async function handler(req, res) {
   let service = req.query.service || "go";
   let country = req.query.country || "3";
 
-  // 兼容你前端原来的 5sim 参数格式，自动转换成 Hero-SMS 的格式
-  // Hero-SMS 中：谷歌是 'go'，中国是 '3'
+  // 兼容你前端原来的格式，自动转换成 Hero-SMS 的格式
   if (service.toLowerCase() === "google") service = "go";
   if (country.toLowerCase() === "china" || country.toLowerCase() === "cn") country = "3";
 
   try {
-    // Hero-SMS 的标准 API 链接 (极致简单，不需要任何 Headers 伪装)
+    // Hero-SMS 的标准 API 链接
     const url = `https://hero-sms.com/stubs/handler_api.php?api_key=${API_KEY}&action=getNumber&service=${service}&country=${country}`;
     
+    // Node.js 18+ 自带原生 fetch，不需要依赖包
     const response = await fetch(url);
-    const rawText = await response.text(); // 它返回的是纯文本，不是 JSON
+    const rawText = await response.text(); 
     
     console.log(`=== Hero-SMS 接口返回 ===\n${rawText}`);
 
-    // 成功的返回格式通常是：ACCESS_NUMBER:123456789:8613800000000
+    // 解析 Hero-SMS 的纯文本返回格式
     if (rawText.startsWith("ACCESS_NUMBER")) {
       const parts = rawText.split(":");
       const orderId = parts[1];
       const phone = parts[2];
       
-      // 完美返回给你的前端
       res.status(200).json({ order_id: orderId, phone: phone });
     } 
     else if (rawText === "NO_NUMBERS") {
@@ -47,5 +47,11 @@ export default async function handler(req, res) {
       res.status(400).json({ error: "API 密钥错误，请检查 Vercel 环境变量" });
     }
     else {
-      // 其他报错
-      res.status(400).json({
+      res.status(400).json({ error: `平台报错: ${rawText}` });
+    }
+
+  } catch (e) {
+    console.error("代码运行报错:", e);
+    res.status(500).json({ error: e.message });
+  }
+};
