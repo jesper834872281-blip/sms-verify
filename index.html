@@ -255,11 +255,47 @@ let orderId = null;
 let pollTimer = null;
 let countdownTimer = null;
 let secondsLeft = 120;
+let btnCooldownTimer = null; // 新增：专门给按钮用的冷却定时器
+
+// 新增：页面加载时，检查是否还在冷却中
+window.onload = function() {
+  const lastTime = localStorage.getItem('sms_cooldown_time');
+  if (lastTime) {
+    const elapsed = Math.floor((Date.now() - parseInt(lastTime)) / 1000);
+    if (elapsed < 120) {
+      // 如果还没过120秒，恢复按钮倒计时
+      startButtonCooldown(120 - elapsed);
+    } else {
+      // 时间到了，清理记录
+      localStorage.removeItem('sms_cooldown_time');
+    }
+  }
+};
 
 function setStatus(msg, type) {
   const bar = document.getElementById('statusBar');
   bar.textContent = msg;
   bar.className = 'status-bar ' + type;
+}
+
+// 新增：控制按钮冷却倒计时的函数
+function startButtonCooldown(seconds) {
+  const btn = document.getElementById('getNumBtn');
+  btn.disabled = true;
+  let remaining = seconds;
+  
+  if (btnCooldownTimer) clearInterval(btnCooldownTimer);
+  
+  btnCooldownTimer = setInterval(() => {
+    remaining--;
+    btn.textContent = `冷却中 (${remaining}s)`;
+    if (remaining <= 0) {
+      clearInterval(btnCooldownTimer);
+      btn.disabled = false;
+      btn.textContent = '重新获取';
+      localStorage.removeItem('sms_cooldown_time');
+    }
+  }, 1000);
 }
 
 async function getNumber() {
@@ -281,9 +317,13 @@ async function getNumber() {
       document.getElementById('copyBtn').style.display = 'block';
       document.getElementById('timerDisplay').style.display = 'block';
       setStatus('号码已获取！请到目标平台填入此号码。', 'success');
+      
+      // 🌟 核心修改：记录当前获取成功的时间，并开启按钮防刷新冷却
+      localStorage.setItem('sms_cooldown_time', Date.now());
+      startButtonCooldown(120); 
+
       startPolling();
       startCountdown();
-      btn.textContent = '重新获取';
     } else {
       throw new Error(data.error || '获取失败');
     }
@@ -308,8 +348,13 @@ function startPolling() {
            <div style="font-size:11px;color:var(--muted)">验证码已到达 · 请尽快填入</div>`;
         setStatus('✓ 验证码接收成功！', 'success');
         finishOrder();
-        document.getElementById('getNumBtn').disabled = false;
-        document.getElementById('getNumBtn').textContent = '重新获取';
+        
+        // 🌟 核心修改：如果验证码提前到了，立刻解除按钮锁定，方便获取下一个
+        clearInterval(btnCooldownTimer);
+        localStorage.removeItem('sms_cooldown_time');
+        const btn = document.getElementById('getNumBtn');
+        btn.disabled = false;
+        btn.textContent = '获取新号码';
       }
     } catch(e) {}
   }, 3000);
@@ -325,8 +370,13 @@ function startCountdown() {
       clearInterval(countdownTimer);
       clearInterval(pollTimer);
       setStatus('等待超时，请重新获取。', 'error');
-      document.getElementById('getNumBtn').disabled = false;
-      document.getElementById('getNumBtn').textContent = '重新获取';
+      
+      // 🌟 核心修改：超时后重置按钮
+      clearInterval(btnCooldownTimer);
+      localStorage.removeItem('sms_cooldown_time');
+      const btn = document.getElementById('getNumBtn');
+      btn.disabled = false;
+      btn.textContent = '重新获取';
     }
   }, 1000);
 }
