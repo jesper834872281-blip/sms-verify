@@ -58,9 +58,16 @@
     let pollTimer = null;
     let countdown = 120;
     let cdTimer = null;
+    const MAX_REQUESTS = 2; // 最多获取次数
 
     // 页面加载时恢复记录的订单
     window.onload = () => {
+        // 检查是否已服务结束
+        if (localStorage.getItem('claude_ended') === '1') {
+            lockAll('服务已结束，验证码已接收，请复制填入claude。');
+            return;
+        }
+
         const saved = localStorage.getItem('claude_order');
         if (saved) {
             const data = JSON.parse(saved);
@@ -78,6 +85,19 @@
     };
 
     async function requestNumber() {
+        // 检查服务是否已结束
+        if (localStorage.getItem('claude_ended') === '1') {
+            lockAll('服务已结束，请关闭页面。');
+            return;
+        }
+
+        // 检查已使用次数
+        const usedCount = parseInt(localStorage.getItem('claude_count') || '0');
+        if (usedCount >= MAX_REQUESTS) {
+            lockAll(`已达到最大获取次数（${MAX_REQUESTS}次），无法继续使用。`);
+            return;
+        }
+
         const country = document.getElementById('countrySelect').value;
         const btn = document.getElementById('mainBtn');
         btn.disabled = true;
@@ -91,15 +111,23 @@
             if (data.phone) {
                 orderId = data.order_id;
                 showPhone(data.phone);
-                
+
+                // 累计使用次数
+                const newCount = usedCount + 1;
+                localStorage.setItem('claude_count', String(newCount));
+
                 // 记在小本本上防刷新
                 localStorage.setItem('claude_order', JSON.stringify({
                     id: orderId, 
                     phone: data.phone, 
                     time: Date.now()
                 }));
-                
-                document.getElementById('statusMsg').textContent = '号码获取成功，请去填写！';
+
+                const remaining = MAX_REQUESTS - newCount;
+                document.getElementById('statusMsg').textContent = remaining > 0
+                    ? `号码获取成功，请去填写！（剩余次数：${remaining}）`
+                    : '号码获取成功！这是最后一次机会。';
+
                 startTimer(120);
                 startPolling();
             } else {
@@ -119,7 +147,7 @@
         document.getElementById('smsArea').style.display = 'block';
         document.getElementById('phoneNumber').textContent = '+' + num;
         document.getElementById('mainBtn').disabled = true;
-        document.getElementById('smsValue').textContent = '------'; // 重置验证码显示
+        document.getElementById('smsValue').textContent = '------';
     }
 
     function startTimer(sec) {
@@ -129,9 +157,19 @@
             countdown--;
             document.getElementById('smsLabel').textContent = `等待短信 (${countdown}s)`;
             if (countdown <= 0) {
-                stopAll();
-                document.getElementById('statusMsg').textContent = '等待超时，请重新获取。';
-                localStorage.removeItem('claude_order'); // 超时清理记忆
+                clearInterval(cdTimer);
+                clearInterval(pollTimer);
+                localStorage.removeItem('claude_order');
+
+                // 超时后检查还有没有次数
+                const usedCount = parseInt(localStorage.getItem('claude_count') || '0');
+                if (usedCount < MAX_REQUESTS) {
+                    document.getElementById('mainBtn').disabled = false;
+                    document.getElementById('mainBtn').textContent = `重新获取（剩余${MAX_REQUESTS - usedCount}次）`;
+                    document.getElementById('statusMsg').textContent = '等待超时，请重新获取。';
+                } else {
+                    lockAll('次数已用完，无法继续获取。');
+                }
             }
         }, 1000);
     }
@@ -143,24 +181,41 @@
                 const res = await fetch(`/api/get-sms?order_id=${orderId}`);
                 const data = await res.json();
                 if (data.status === 'ok') {
-                    stopAll();
+                    clearInterval(pollTimer);
+                    clearInterval(cdTimer);
+
+                    // 显示验证码
                     document.getElementById('smsValue').textContent = data.code;
-                    document.getElementById('statusMsg').textContent = '✓ 验证码已成功到达！';
-                    fetch(`/api/finish-order?order_id=${orderId}`); // 通知平台完成
-                    localStorage.removeItem('claude_order'); // 完成后清理记忆
+                    document.getElementById('statusMsg').textContent = '✓ 验证码已成功到达！服务已结束，请关闭页面。';
+
+                    fetch(`/api/finish-order?order_id=${orderId}`);
+                    localStorage.removeItem('claude_order');
+
+                    // 标记服务结束，刷新也不能再用
+                    localStorage.setItem('claude_ended', '1');
+                    lockAll(null); // 锁定所有操作
                 }
             } catch(e) {}
-        }, 3000); // 每 3 秒查一次
+        }, 3000);
     }
 
-    function stopAll() {
+    // 锁定整个页面所有操作
+    function lockAll(msg) {
         clearInterval(pollTimer);
         clearInterval(cdTimer);
-        document.getElementById('mainBtn').disabled = false;
-        document.getElementById('mainBtn').textContent = '获取新号码';
+        const btn = document.getElementById('mainBtn');
+        btn.disabled = true;
+        btn.textContent = '服务已结束';
+        btn.style.background = '#6b7280';
+        document.getElementById('countrySelect').disabled = true;
+        if (msg) document.getElementById('statusMsg').textContent = msg;
+
+        // 刷新时弹出提示
+        window.onbeforeunload = () => '服务已结束，确定要离开？';
     }
 
     function copyPhone() {
+        if (localStorage.getItem('claude_ended') === '1') return;
         const num = document.getElementById('phoneNumber').textContent;
         navigator.clipboard.writeText(num);
         const msg = document.getElementById('statusMsg');
