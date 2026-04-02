@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
         :root { --bg: #0d0f14; --surface: #151820; --border: #252a36; --accent: #00e5a0; --text: #e8eaf0; --muted: #6b7280; }
-        body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; }
+        body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
         .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         h1 { font-size: 20px; margin-bottom: 24px; color: var(--accent); text-align: center; }
         .step { margin-bottom: 20px; }
@@ -21,6 +21,7 @@
         .phone-num { font-size: 20px; color: #0099ff; text-align: center; margin-top: 10px; }
         .sms-code { font-size: 32px; color: var(--accent); text-align: center; letter-spacing: 4px; margin-top: 15px; }
         .status { font-size: 11px; text-align: center; margin-top: 15px; color: var(--muted); }
+        .disclaimer { margin-top: 20px; padding: 12px; background: #0d0f14; border: 1px solid #252a36; border-radius: 8px; font-size: 10px; color: #6b7280; line-height: 1.8; }
     </style>
 </head>
 <body>
@@ -28,7 +29,6 @@
 <div class="card">
     <h1>Claude 专属接码</h1>
 
-    <!-- 新增：授权码输入框 -->
     <div class="step">
         <span class="label">授权码</span>
         <input type="text" id="codeInput" placeholder="请输入授权码" autocomplete="off" />
@@ -58,6 +58,15 @@
     </div>
 
     <div class="status" id="statusMsg">请输入授权码后获取号码</div>
+
+    <div class="disclaimer">
+        ⚠️ 免责声明：因 Claude 涉及多维度检测风控因素，不保证必定成功：<br>
+        1. 设备使用环境 &nbsp;
+        2. 使用 VPN 节点的延迟 &nbsp;
+        3. IP 的风控值和共享人数 &nbsp;
+        4. Google 邮箱风控 &nbsp;
+        5. 其他不确定因素
+    </div>
 </div>
 
 <script>
@@ -78,7 +87,6 @@
             const elapsed = Math.floor((Date.now() - data.time) / 1000);
             if (elapsed < 120) {
                 orderId = data.id;
-                // 恢复授权码并锁定输入框
                 if (data.code) {
                     document.getElementById('codeInput').value = data.code;
                     document.getElementById('codeInput').disabled = true;
@@ -99,7 +107,6 @@
             return;
         }
 
-        // 检查授权码是否填写
         const code = document.getElementById('codeInput').value.trim();
         if (!code) {
             document.getElementById('statusMsg').textContent = '❌ 请先输入授权码！';
@@ -113,32 +120,23 @@
         document.getElementById('statusMsg').textContent = '正在验证授权码...';
 
         try {
-            // 授权码传给后端验证
             const res = await fetch(`/api/get-number?country=${country}&code=${encodeURIComponent(code)}`);
             const data = await res.json();
 
             if (data.phone) {
                 orderId = data.order_id;
-
-                // 锁定授权码输入框，防止修改
                 document.getElementById('codeInput').disabled = true;
-
                 showPhone(data.phone);
-
-                // 记录订单（含授权码，刷新后可恢复）
                 localStorage.setItem('claude_order', JSON.stringify({
                     id: orderId,
                     phone: data.phone,
                     code: code,
                     time: Date.now()
                 }));
-
                 document.getElementById('statusMsg').textContent = '号码获取成功，请去填写！';
                 startTimer(120);
                 startPolling();
-
             } else {
-                // 授权码无效或用完，显示后端返回的错误
                 document.getElementById('statusMsg').textContent = '❌ ' + (data.error || '获取失败');
                 btn.disabled = false;
                 btn.textContent = '获取号码';
