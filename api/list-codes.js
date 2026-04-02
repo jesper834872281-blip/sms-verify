@@ -1,5 +1,11 @@
 const ADMIN_MASTER_KEY = "5201314";
 
+const COUNTRY_NAMES = {
+  "16":  "🇬🇧 英国 (UK)",
+  "73":  "🇧🇷 巴西 (Brazil)",
+  "187": "🇺🇸 美国 (USA)"
+};
+
 export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
 
@@ -36,14 +42,23 @@ export default async function handler(req, res) {
     const fields = d.result || [];
     const obj = {};
     for (let i = 0; i < fields.length; i += 2) obj[fields[i]] = fields[i+1];
+
     const uses = parseInt(obj.uses ?? 0);
+    const countryCode = obj.country ?? "未知";
+    const createdAt = parseInt(obj.createdAt ?? 0);
+
     return {
       code: k.replace("code:", ""),
       uses: uses,
-      country: obj.country ?? "未知",
+      country: COUNTRY_NAMES[countryCode] || countryCode,
+      createdAt: createdAt,
+      createdAtStr: createdAt ? new Date(createdAt).toLocaleString('zh-CN', { timeZone: 'Asia/Shanghai' }) : "未知",
       status: uses >= 99 ? "已作废" : uses >= 2 ? "已用完" : "可用"
     };
   }));
+
+  // 按生成时间倒序排列（最新的在最前）
+  list.sort((a, b) => b.createdAt - a.createdAt);
 
   res.status(200).json(list);
 }
