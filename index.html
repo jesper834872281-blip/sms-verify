@@ -13,10 +13,11 @@
         h1 { font-size: 20px; margin-bottom: 24px; color: var(--accent); text-align: center; }
         .step { margin-bottom: 20px; }
         .label { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; display: block; }
-        select, .display-box { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: #fff; padding: 12px; outline: none; font-size: 14px; }
-        .btn { width: 100%; border: none; border-radius: 8px; padding: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 10px; }
+        select, .display-box, input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: #fff; padding: 12px; outline: none; font-size: 14px; box-sizing: border-box; font-family: 'JetBrains Mono', monospace; }
+        input::placeholder { color: var(--muted); }
+        .btn { width: 100%; border: none; border-radius: 8px; padding: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 10px; font-family: 'JetBrains Mono', monospace; }
         .btn-primary { background: var(--accent); color: #000; }
-        .btn-primary:disabled { opacity: 0.3; }
+        .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
         .phone-num { font-size: 20px; color: #0099ff; text-align: center; margin-top: 10px; }
         .sms-code { font-size: 32px; color: var(--accent); text-align: center; letter-spacing: 4px; margin-top: 15px; }
         .status { font-size: 11px; text-align: center; margin-top: 15px; color: var(--muted); }
@@ -26,7 +27,13 @@
 
 <div class="card">
     <h1>Claude 专属接码</h1>
-    
+
+    <!-- 新增：授权码输入框 -->
+    <div class="step">
+        <span class="label">授权码</span>
+        <input type="text" id="codeInput" placeholder="请输入授权码" autocomplete="off" />
+    </div>
+
     <div class="step">
         <span class="label">选择国家 (Claude 专用)</span>
         <select id="countrySelect">
@@ -50,7 +57,7 @@
         </div>
     </div>
 
-    <div class="status" id="statusMsg">准备就绪</div>
+    <div class="status" id="statusMsg">请输入授权码后获取号码</div>
 </div>
 
 <script>
@@ -58,11 +65,8 @@
     let pollTimer = null;
     let countdown = 120;
     let cdTimer = null;
-    const MAX_REQUESTS = 2; // 最多获取次数
 
-    // 页面加载时恢复记录的订单
     window.onload = () => {
-        // 检查是否已服务结束
         if (localStorage.getItem('claude_ended') === '1') {
             lockAll('服务已结束，验证码已接收，请复制填入claude。');
             return;
@@ -74,6 +78,11 @@
             const elapsed = Math.floor((Date.now() - data.time) / 1000);
             if (elapsed < 120) {
                 orderId = data.id;
+                // 恢复授权码并锁定输入框
+                if (data.code) {
+                    document.getElementById('codeInput').value = data.code;
+                    document.getElementById('codeInput').disabled = true;
+                }
                 showPhone(data.phone);
                 startTimer(120 - elapsed);
                 startPolling();
@@ -85,16 +94,15 @@
     };
 
     async function requestNumber() {
-        // 检查服务是否已结束
         if (localStorage.getItem('claude_ended') === '1') {
             lockAll('服务已结束，请关闭页面。');
             return;
         }
 
-        // 检查已使用次数
-        const usedCount = parseInt(localStorage.getItem('claude_count') || '0');
-        if (usedCount >= MAX_REQUESTS) {
-            lockAll(`已达到最大获取次数（${MAX_REQUESTS}次），无法继续使用。`);
+        // 检查授权码是否填写
+        const code = document.getElementById('codeInput').value.trim();
+        if (!code) {
+            document.getElementById('statusMsg').textContent = '❌ 请先输入授权码！';
             return;
         }
 
@@ -102,36 +110,36 @@
         const btn = document.getElementById('mainBtn');
         btn.disabled = true;
         btn.textContent = '请求中...';
-        document.getElementById('statusMsg').textContent = '正在获取号码...';
-        
+        document.getElementById('statusMsg').textContent = '正在验证授权码...';
+
         try {
-            const res = await fetch(`/api/get-number?country=${country}`);
+            // 授权码传给后端验证
+            const res = await fetch(`/api/get-number?country=${country}&code=${encodeURIComponent(code)}`);
             const data = await res.json();
-            
+
             if (data.phone) {
                 orderId = data.order_id;
+
+                // 锁定授权码输入框，防止修改
+                document.getElementById('codeInput').disabled = true;
+
                 showPhone(data.phone);
 
-                // 累计使用次数
-                const newCount = usedCount + 1;
-                localStorage.setItem('claude_count', String(newCount));
-
-                // 记在小本本上防刷新
+                // 记录订单（含授权码，刷新后可恢复）
                 localStorage.setItem('claude_order', JSON.stringify({
-                    id: orderId, 
-                    phone: data.phone, 
+                    id: orderId,
+                    phone: data.phone,
+                    code: code,
                     time: Date.now()
                 }));
 
-                const remaining = MAX_REQUESTS - newCount;
-                document.getElementById('statusMsg').textContent = remaining > 0
-                    ? `号码获取成功，请去填写！（剩余次数：${remaining}）`
-                    : '号码获取成功！这是最后一次机会。';
-
+                document.getElementById('statusMsg').textContent = '号码获取成功，请去填写！';
                 startTimer(120);
                 startPolling();
+
             } else {
-                document.getElementById('statusMsg').textContent = '报错: ' + (data.error || '获取失败');
+                // 授权码无效或用完，显示后端返回的错误
+                document.getElementById('statusMsg').textContent = '❌ ' + (data.error || '获取失败');
                 btn.disabled = false;
                 btn.textContent = '获取号码';
             }
@@ -160,16 +168,10 @@
                 clearInterval(cdTimer);
                 clearInterval(pollTimer);
                 localStorage.removeItem('claude_order');
-
-                // 超时后检查还有没有次数
-                const usedCount = parseInt(localStorage.getItem('claude_count') || '0');
-                if (usedCount < MAX_REQUESTS) {
-                    document.getElementById('mainBtn').disabled = false;
-                    document.getElementById('mainBtn').textContent = `重新获取（剩余${MAX_REQUESTS - usedCount}次）`;
-                    document.getElementById('statusMsg').textContent = '等待超时，请重新获取。';
-                } else {
-                    lockAll('次数已用完，无法继续获取。');
-                }
+                document.getElementById('statusMsg').textContent = '等待超时，授权码次数已扣除，请重新获取。';
+                document.getElementById('mainBtn').disabled = false;
+                document.getElementById('mainBtn').textContent = '重新获取';
+                document.getElementById('codeInput').disabled = false;
             }
         }, 1000);
     }
@@ -183,23 +185,16 @@
                 if (data.status === 'ok') {
                     clearInterval(pollTimer);
                     clearInterval(cdTimer);
-
-                    // 显示验证码
                     document.getElementById('smsValue').textContent = data.code;
-                    document.getElementById('statusMsg').textContent = '✓ 验证码已成功到达！服务已结束，请关闭页面。';
-
                     fetch(`/api/finish-order?order_id=${orderId}`);
                     localStorage.removeItem('claude_order');
-
-                    // 标记服务结束，刷新也不能再用
                     localStorage.setItem('claude_ended', '1');
-                    lockAll(null); // 锁定所有操作
+                    lockAll('✓ 验证码已到达！服务结束，请关闭页面。');
                 }
             } catch(e) {}
         }, 3000);
     }
 
-    // 锁定整个页面所有操作
     function lockAll(msg) {
         clearInterval(pollTimer);
         clearInterval(cdTimer);
@@ -208,9 +203,8 @@
         btn.textContent = '服务已结束';
         btn.style.background = '#6b7280';
         document.getElementById('countrySelect').disabled = true;
+        document.getElementById('codeInput').disabled = true;
         if (msg) document.getElementById('statusMsg').textContent = msg;
-
-        // 刷新时弹出提示
         window.onbeforeunload = () => '服务已结束，确定要离开？';
     }
 
