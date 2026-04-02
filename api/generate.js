@@ -9,11 +9,11 @@ export default async function handler(req, res) {
   }
 
   const newCode = "SN-" + Math.random().toString(36).substring(2, 10).toUpperCase();
-
   const redisUrl = process.env.REDIS_URL;
   const redisToken = process.env.REDIS_TOKEN;
+  const createdAt = Date.now(); // 记录生成时间
 
-  await fetch(`${redisUrl}/hset/code:${newCode}/uses/0/country/${country || "16"}`, {
+  await fetch(`${redisUrl}/hset/code:${newCode}/uses/0/country/${country || "16"}/createdAt/${createdAt}`, {
     headers: { Authorization: `Bearer ${redisToken}` }
   });
 
