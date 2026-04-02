@@ -1,6 +1,7 @@
 {
+  "type": "module",
   "dependencies": {
-    "node-fetch": "^2.7.0",
-    "https-proxy-agent": "^7.0.0"
+    "@vercel/kv": "^1.0.0",
+    "node-fetch": "^3.3.2"
   }
 }
