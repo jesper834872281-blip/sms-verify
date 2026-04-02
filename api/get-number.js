@@ -1,29 +1,58 @@
-const API_KEY = process.env.SMS_API_KEY;
+import { kv } from '@vercel/kv';
 
-module.exports = async function handler(req, res) {
+const API_KEY = process.env.SMS_API_KEY;
+const MAX_USES = 2;
+
+const COUNTRY_MAP = {
+  "16":  "gb",
+  "73":  "brazil",
+  "187": "usa"
+};
+
+export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
-  
-  // 接收前端传来的国家代码：英国(12), 巴西(73), 美国(187)
-  const country = req.query.country || "12"; 
-  
-  // 🌟 这里换成你刚刚确认的绝对正确的 Claude 专属代码：acz
-  const service = "acz"; 
+
+  const { code, country } = req.query;
+
+  if (!code) {
+    return res.status(400).json({ error: "请输入授权码" });
+  }
+
+  const key = `code:${code}`;
+  const data = await kv.hgetall(key);
+
+  if (!data) {
+    return res.status(403).json({ error: "授权码无效" });
+  }
+
+  const uses = parseInt(data.uses ?? 0);
+  if (uses >= MAX_USES) {
+    return res.status(403).json({ error: `授权码已用完（限${MAX_USES}次）` });
+  }
+
+  // 用码中绑定的国家，或用传入的国家
+  const countryCode = country || data.country || "16";
+  const countrySlug = COUNTRY_MAP[countryCode] || "gb";
 
   try {
-    const url = `https://hero-sms.com/stubs/handler_api.php?api_key=${API_KEY}&action=getNumber&service=${service}&country=${country}`;
-    
-    const response = await fetch(url);
-    const rawText = await response.text();
+    const response = await fetch(
+      `https://5sim.net/v1/user/buy/activation/${countrySlug}/any/claude`,
+      {
+        headers: {
+          "Authorization": `Bearer ${API_KEY}`,
+          "Accept": "application/json"
+        }
+      }
+    );
+    const result = await response.json();
 
-    if (rawText.startsWith("ACCESS_NUMBER")) {
-      const parts = rawText.split(":");
-      const orderId = parts[1];
-      const phone = parts[2];
-      return res.status(200).json({ order_id: orderId, phone: phone });
+    if (result.id) {
+      await kv.hset(key, { uses: uses + 1 });
+      res.json({ order_id: String(result.id), phone: String(result.phone) });
     } else {
-      return res.status(400).json({ error: "平台报错: " + rawText });
+      res.status(400).json({ error: JSON.stringify(result) });
     }
   } catch (e) {
-    return res.status(500).json({ error: "服务器内部错误: " + e.message });
+    res.status(500).json({ error: e.message });
   }
-};
+}
