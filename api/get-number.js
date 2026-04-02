@@ -1,11 +1,9 @@
-import { kv } from '@vercel/kv';
-
 const API_KEY = process.env.SMS_API_KEY;
 const MAX_USES = 2;
 
 const COUNTRY_MAP = {
-  "16":  "gb",
-  "73":  "brazil",
+  "16": "england",
+  "73": "brazil",
   "187": "usa"
 };
 
@@ -13,26 +11,32 @@ export default async function handler(req, res) {
   res.setHeader("Access-Control-Allow-Origin", "*");
 
   const { code, country } = req.query;
+  if (!code) return res.status(400).json({ error: "请输入授权码" });
 
-  if (!code) {
-    return res.status(400).json({ error: "请输入授权码" });
-  }
+  const redisUrl = process.env.REDIS_URL;
+  const redisToken = process.env.REDIS_TOKEN;
 
-  const key = `code:${code}`;
-  const data = await kv.hgetall(key);
+  // 查询授权码
+  const r = await fetch(`${redisUrl}/hgetall/code:${code}`, {
+    headers: { Authorization: `Bearer ${redisToken}` }
+  });
+  const d = await r.json();
+  const fields = d.result || [];
 
-  if (!data) {
+  if (!fields || fields.length === 0) {
     return res.status(403).json({ error: "授权码无效" });
   }
 
-  const uses = parseInt(data.uses ?? 0);
+  const obj = {};
+  for (let i = 0; i < fields.length; i += 2) obj[fields[i]] = fields[i+1];
+
+  const uses = parseInt(obj.uses ?? 0);
   if (uses >= MAX_USES) {
     return res.status(403).json({ error: `授权码已用完（限${MAX_USES}次）` });
   }
 
-  // 用码中绑定的国家，或用传入的国家
-  const countryCode = country || data.country || "16";
-  const countrySlug = COUNTRY_MAP[countryCode] || "gb";
+  const countryCode = country || obj.country || "16";
+  const countrySlug = COUNTRY_MAP[countryCode] || "england";
 
   try {
     const response = await fetch(
@@ -47,7 +51,9 @@ export default async function handler(req, res) {
     const result = await response.json();
 
     if (result.id) {
-      await kv.hset(key, { uses: uses + 1 });
+      await fetch(`${redisUrl}/hset/code:${code}/uses/${uses + 1}`, {
+        headers: { Authorization: `Bearer ${redisToken}` }
+      });
       res.json({ order_id: String(result.id), phone: String(result.phone) });
     } else {
       res.status(400).json({ error: JSON.stringify(result) });
