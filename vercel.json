@@ -10,8 +10,3 @@
     { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
-```
-
-**「Commit changes」** 保存，等1分钟后再访问：
-```
-https://sms-verify-three.vercel.app/admin.html
