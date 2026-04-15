@@ -174,12 +174,14 @@
         }, 1000);
     }
 
-    function startPolling() {
+function startPolling() {
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(async () => {
             try {
-                const res = await fetch(`/api/get-sms?order_id=${orderId}`);
+                // 🌟 关键修复：加上 &_t=${Date.now()} 打破浏览器本地缓存！
+                const res = await fetch(`/api/get-sms?order_id=${orderId}&_t=${Date.now()}`);
                 const data = await res.json();
+                
                 if (data.status === 'ok') {
                     clearInterval(pollTimer);
                     clearInterval(cdTimer);
@@ -189,7 +191,9 @@
                     localStorage.setItem('claude_ended', '1');
                     lockAll('✓ 验证码已到达！服务结束，请关闭页面。');
                 }
-            } catch(e) {}
+            } catch(e) {
+                console.log("查询验证码网络波动:", e);
+            }
         }, 3000);
     }
 
