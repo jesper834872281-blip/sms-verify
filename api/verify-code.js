@@ -10,39 +10,42 @@ export default async function handler(req, res) {
   }
 
   try {
-    // 🌟 1. 自动获取你当前的 Vercel 域名
-    const host = req.headers.host;
-    const protocol = host.includes('localhost') ? 'http' : 'https';
-    
-    // 🌟 2. 这里的 200102 是你刚才抓包泄露的管理员密码
-    // 如果你以后在 admin.html 里换了总密码，记得把这里也同步改一下！
-    const adminKey = "200102"; 
-    
-    // 🌟 3. 让 Vercel 自己去查自己的账本
-    const listUrl = `${protocol}://${host}/api/list-codes?key=${adminKey}`;
-    
-    const response = await fetch(listUrl);
-    const codesList = await response.json();
+    // 🌟 1. 获取你的 Redis 数据库钥匙
+    const redisUrl = process.env.REDIS_URL;
+    const redisToken = process.env.REDIS_TOKEN;
 
-    if (codesList.error) {
-      return res.status(500).json({ valid: false, error: "账本读取失败: " + codesList.error });
+    if (!redisUrl || !redisToken) {
+       return res.status(500).json({ valid: false, error: "服务器缺失数据库环境变量" });
     }
 
-    // 🌟 4. 在全库卡密里，寻找客户填写的这个码
-    const foundCode = codesList.find(c => c.code === code);
+    // 🌟 2. 直接去 Redis 里翻找这个授权码的档案
+    const response = await fetch(`${redisUrl}/hgetall/code:${code}`, {
+      headers: { Authorization: `Bearer ${redisToken}` }
+    });
+    const data = await response.json();
+    const fields = data.result || [];
 
-    if (!foundCode) {
+    // 🌟 3. 如果结果是空的，说明根本没生成过这个码
+    if (fields.length === 0) {
       return res.status(200).json({ valid: false, error: "授权码不存在或输入有误！" });
     }
 
-    // 🌟 5. 检查卡密状态 (同步你 admin.html 里的防白嫖逻辑)
-    if (parseInt(foundCode.uses) >= 99) {
+    // 🌟 4. 把查到的数据翻译成对象
+    const obj = {};
+    for (let i = 0; i < fields.length; i += 2) {
+      obj[fields[i]] = fields[i+1];
+    }
+
+    const uses = parseInt(obj.uses ?? 0);
+
+    // 🌟 5. 检查卡密状态
+    if (uses >= 99) {
       return res.status(200).json({ valid: false, error: "该授权码已被管理员作废！" });
     }
     
-    // 如果你想限制一个码只能接 1 次或 2 次，在这里拦截
-    // 这里设置的是如果已经接码成功过，就不让进了
-    if (parseInt(foundCode.uses) >= 1) { 
+    // 从你的 admin 代码来看，你似乎设计了最多可以用 2 次？
+    // 如果你想限制只能用 1 次，就把这里的 >= 2 改成 >= 1
+    if (uses >= 2) { 
       return res.status(200).json({ valid: false, error: "该授权码次数已用尽！" });
     }
 
@@ -50,6 +53,6 @@ export default async function handler(req, res) {
     return res.status(200).json({ valid: true });
 
   } catch (error) {
-    return res.status(500).json({ valid: false, error: "验证服务器开小差了，请重试" });
+    return res.status(500).json({ valid: false, error: "验证服务器网络波动，请重试" });
   }
 }
