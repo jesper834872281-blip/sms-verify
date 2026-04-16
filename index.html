@@ -37,7 +37,7 @@
         <span class="label">请输入您的专属授权码</span>
         <input type="text" id="codeInput" placeholder="输入密钥进入系统" autocomplete="off" onkeypress="handleEnter(event)" />
         <div class="status" id="loginError" style="color: var(--error); display: none;">授权码不能为空</div>
-        <button class="btn btn-primary" onclick="verifyAndEnter()" style="margin-top: 20px;">验证并进入系统</button>
+        <button class="btn btn-primary" id="loginBtn" onclick="verifyAndEnter()" style="margin-top: 20px;">验证并进入系统</button>
     </div>
 </div>
 
@@ -82,17 +82,17 @@
     let pollTimer = null;
     let countdown = 120;
     let cdTimer = null;
-    let userAuthCode = ""; // 在内存里记住客户输入的密钥
+    let userAuthCode = ""; 
 
-    // 支持按回车键直接进入
     function handleEnter(e) {
         if (e.key === 'Enter') verifyAndEnter();
     }
 
-    // 🚪 门禁验证逻辑
-    function verifyAndEnter() {
+    // 🚪 🌟 核心升级：对接后端的真实防盗门 🌟
+    async function verifyAndEnter() {
         const code = document.getElementById('codeInput').value.trim();
         const errObj = document.getElementById('loginError');
+        const btn = document.getElementById('loginBtn');
         
         if (!code) {
             errObj.style.display = 'block';
@@ -100,15 +100,36 @@
             return;
         }
 
-        // 把密钥记在内存里
-        userAuthCode = code;
-        
-        // 丝滑切换界面
-        document.getElementById('loginCard').classList.add('hidden');
-        document.getElementById('mainCard').classList.remove('hidden');
+        // 锁定按钮，显示正在验证
+        btn.disabled = true;
+        btn.textContent = '正在连接数据库校验...';
+        errObj.style.display = 'none';
+
+        try {
+            // 让前端去问咱们刚写好的 Vercel 后端接口
+            const res = await fetch(`/api/verify-code?code=${encodeURIComponent(code)}`);
+            const data = await res.json();
+
+            if (data.valid) {
+                // ✅ 验证通过：数据库里有这个码！
+                userAuthCode = code;
+                document.getElementById('loginCard').classList.add('hidden');
+                document.getElementById('mainCard').classList.remove('hidden');
+            } else {
+                // ❌ 验证失败：密码错误或已过期
+                errObj.style.display = 'block';
+                errObj.textContent = '❌ ' + (data.error || '授权码无效或已过期！');
+            }
+        } catch (e) {
+            errObj.style.display = 'block';
+            errObj.textContent = '❌ 网络错误，无法连接验证服务器';
+        } finally {
+            // 恢复按钮状态
+            btn.disabled = false;
+            btn.textContent = '验证并进入系统';
+        }
     }
 
-    // 🔄 页面加载时：如果客户刷新了网页，检查是不是在等短信中
     window.onload = () => {
         if (localStorage.getItem('claude_ended') === '1') {
             document.getElementById('loginCard').classList.add('hidden');
@@ -122,12 +143,11 @@
             const data = JSON.parse(saved);
             const elapsed = Math.floor((Date.now() - data.time) / 1000);
             if (elapsed < 120) {
-                // 如果订单还在有效期，直接跳过门禁！
                 document.getElementById('loginCard').classList.add('hidden');
                 document.getElementById('mainCard').classList.remove('hidden');
                 
                 orderId = data.id;
-                userAuthCode = data.code; // 恢复密钥
+                userAuthCode = data.code; 
                 showPhone(data.phone);
                 startTimer(120 - elapsed);
                 startPolling();
@@ -138,7 +158,6 @@
         }
     };
 
-    // 🚀 请求号码
     async function requestNumber() {
         if (localStorage.getItem('claude_ended') === '1') return;
 
@@ -149,16 +168,14 @@
         document.getElementById('statusMsg').textContent = '正在连接底层接口，请稍候...';
 
         try {
-            // 将内存里的授权码和选择的国家一起发给后端
             const res = await fetch(`/api/get-number?country=${country}&code=${encodeURIComponent(userAuthCode)}`);
             const data = await res.json();
 
             if (data.phone) {
                 orderId = data.order_id;
-                document.getElementById('countrySelect').disabled = true; // 获取号码后锁定国家下拉框
+                document.getElementById('countrySelect').disabled = true; 
                 showPhone(data.phone);
                 
-                // 记在本地防刷新
                 localStorage.setItem('claude_order', JSON.stringify({
                     id: orderId,
                     phone: data.phone,
@@ -181,15 +198,13 @@
         }
     }
 
-    // 📱 显示手机号和短信框
     function showPhone(num) {
         document.getElementById('phoneArea').classList.remove('hidden');
         document.getElementById('smsArea').classList.remove('hidden');
         document.getElementById('phoneNumber').textContent = '+' + num;
-        document.getElementById('mainBtn').classList.add('hidden'); // 拿到号后隐藏获取按钮
+        document.getElementById('mainBtn').classList.add('hidden'); 
     }
 
-    // ⏳ 倒计时
     function startTimer(sec) {
         countdown = sec;
         if (cdTimer) clearInterval(cdTimer);
@@ -206,7 +221,6 @@
         }, 1000);
     }
 
-    // 📡 轮询查短信（已带防缓存时间戳）
     function startPolling() {
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(async () => {
@@ -226,7 +240,6 @@
         }, 3000);
     }
 
-    // 🔒 完结锁死
     function lockAll(msg) {
         clearInterval(pollTimer);
         clearInterval(cdTimer);
@@ -238,7 +251,6 @@
         }
     }
 
-    // 📋 复制号码
     function copyPhone() {
         const num = document.getElementById('phoneNumber').textContent;
         navigator.clipboard.writeText(num);
