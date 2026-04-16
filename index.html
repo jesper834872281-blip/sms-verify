@@ -3,69 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Claude 专属接码</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🤖</text></svg>">
+    <title>Claude 专属接码通道</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🛡️</text></svg>">
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        :root { --bg: #0d0f14; --surface: #151820; --border: #252a36; --accent: #00e5a0; --text: #e8eaf0; --muted: #6b7280; }
+        :root { --bg: #0d0f14; --surface: #151820; --border: #252a36; --accent: #00e5a0; --text: #e8eaf0; --muted: #6b7280; --error: #ff4757; }
         body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; padding: 20px; box-sizing: border-box; }
-        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h1 { font-size: 20px; margin-bottom: 24px; color: var(--accent); text-align: center; }
+        .card { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; padding: 32px; width: 100%; max-width: 400px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); transition: 0.3s; }
+        h1 { font-size: 20px; margin-bottom: 24px; color: var(--accent); text-align: center; letter-spacing: 1px; }
         .step { margin-bottom: 20px; }
         .label { font-size: 10px; color: var(--muted); text-transform: uppercase; margin-bottom: 8px; display: block; }
-        select, .display-box, input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: #fff; padding: 12px; outline: none; font-size: 14px; box-sizing: border-box; font-family: 'JetBrains Mono', monospace; }
+        select, .display-box, input { width: 100%; background: var(--bg); border: 1px solid var(--border); border-radius: 8px; color: #fff; padding: 12px; outline: none; font-size: 14px; box-sizing: border-box; font-family: 'JetBrains Mono', monospace; transition: 0.2s; }
+        input:focus { border-color: var(--accent); }
         input::placeholder { color: var(--muted); }
         .btn { width: 100%; border: none; border-radius: 8px; padding: 12px; font-weight: 600; cursor: pointer; transition: 0.2s; margin-top: 10px; font-family: 'JetBrains Mono', monospace; }
         .btn-primary { background: var(--accent); color: #000; }
-        .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-primary:disabled { opacity: 0.3; cursor: not-allowed; transform: none; }
         .phone-num { font-size: 20px; color: #0099ff; text-align: center; margin-top: 10px; }
         .sms-code { font-size: 32px; color: var(--accent); text-align: center; letter-spacing: 4px; margin-top: 15px; }
         .status { font-size: 11px; text-align: center; margin-top: 15px; color: var(--muted); }
         .disclaimer { margin-top: 20px; padding: 12px; background: #0d0f14; border: 1px solid #252a36; border-radius: 8px; font-size: 10px; color: #6b7280; line-height: 1.8; }
+        
+        /* 隐藏界面的类 */
+        .hidden { display: none !important; }
     </style>
 </head>
 <body>
 
-<div class="card">
+<div class="card" id="loginCard">
+    <h1 style="color: #fff;">系统验证</h1>
+    <div class="step">
+        <span class="label">请输入您的专属授权码</span>
+        <input type="text" id="codeInput" placeholder="输入密钥进入系统" autocomplete="off" onkeypress="handleEnter(event)" />
+        <div class="status" id="loginError" style="color: var(--error); display: none;">授权码不能为空</div>
+        <button class="btn btn-primary" onclick="verifyAndEnter()" style="margin-top: 20px;">验证并进入系统</button>
+    </div>
+</div>
+
+<div class="card hidden" id="mainCard">
     <h1>Claude 专属接码</h1>
 
     <div class="step">
-        <span class="label">授权码</span>
-        <input type="text" id="codeInput" placeholder="请输入授权码" autocomplete="off" />
-    </div>
-
-    <div class="step">
-        <span class="label">选择国家 (Claude 专用)</span>
+        <span class="label">选择国家 (同密钥通用)</span>
         <select id="countrySelect">
             <option value="16">🇬🇧 英国 (UK)</option>
             <option value="73">🇧🇷 巴西 (Brazil)</option>
-            <option value="187">🇺🇸 美国 (USA)</option>
+            <option value="33">🇨🇴 哥伦比亚 (Colombia)</option> 
         </select>
         <button class="btn btn-primary" id="mainBtn" onclick="requestNumber()">获取号码</button>
     </div>
 
-    <div id="phoneArea" style="display:none">
+    <div id="phoneArea" class="hidden">
         <span class="label">当前虚拟号码</span>
         <div class="display-box phone-num" id="phoneNumber">+000000000</div>
         <button class="btn" style="background:#252a36; color:#fff; font-size:11px;" onclick="copyPhone()">点击复制号码</button>
     </div>
 
-    <div id="smsArea" style="display:none">
+    <div id="smsArea" class="hidden">
         <span class="label" id="smsLabel">等待短信 (120s)</span>
         <div class="display-box" id="smsBox">
             <div class="sms-code" id="smsValue">------</div>
         </div>
     </div>
 
-    <div class="status" id="statusMsg">请输入授权码后获取号码</div>
+    <div class="status" id="statusMsg">准备就绪，请选择国家并获取</div>
 
     <div class="disclaimer">
-        ⚠️ 声明：因 Claude注册涉及多维度因素，不保证必定成功，不成功请联系退款：<br>
+        ⚠️ 声明：因 Claude 注册涉及多维度因素，不保证必定成功：<br>
         1. 设备使用环境 &nbsp;
-        2. 使用 VPN 节点的延迟 &nbsp;
-        3. IP 的风控值和共享人数 &nbsp;
-        4. Google 邮箱权重值 &nbsp;
-        5. 其他不确定因素
+        2. VPN 节点的延迟与纯净度 &nbsp;
+        3. 邮箱权重值
     </div>
 </div>
 
@@ -74,10 +82,38 @@
     let pollTimer = null;
     let countdown = 120;
     let cdTimer = null;
+    let userAuthCode = ""; // 在内存里记住客户输入的密钥
 
+    // 支持按回车键直接进入
+    function handleEnter(e) {
+        if (e.key === 'Enter') verifyAndEnter();
+    }
+
+    // 🚪 门禁验证逻辑
+    function verifyAndEnter() {
+        const code = document.getElementById('codeInput').value.trim();
+        const errObj = document.getElementById('loginError');
+        
+        if (!code) {
+            errObj.style.display = 'block';
+            errObj.textContent = '❌ 请先输入授权码！';
+            return;
+        }
+
+        // 把密钥记在内存里
+        userAuthCode = code;
+        
+        // 丝滑切换界面
+        document.getElementById('loginCard').classList.add('hidden');
+        document.getElementById('mainCard').classList.remove('hidden');
+    }
+
+    // 🔄 页面加载时：如果客户刷新了网页，检查是不是在等短信中
     window.onload = () => {
         if (localStorage.getItem('claude_ended') === '1') {
-            lockAll('服务已结束，验证码已接收，请复制填入claude。');
+            document.getElementById('loginCard').classList.add('hidden');
+            document.getElementById('mainCard').classList.remove('hidden');
+            lockAll('服务已结束，验证码已接收。若需新号请清理浏览器缓存。');
             return;
         }
 
@@ -86,102 +122,97 @@
             const data = JSON.parse(saved);
             const elapsed = Math.floor((Date.now() - data.time) / 1000);
             if (elapsed < 120) {
+                // 如果订单还在有效期，直接跳过门禁！
+                document.getElementById('loginCard').classList.add('hidden');
+                document.getElementById('mainCard').classList.remove('hidden');
+                
                 orderId = data.id;
-                if (data.code) {
-                    document.getElementById('codeInput').value = data.code;
-                    document.getElementById('codeInput').disabled = true;
-                }
+                userAuthCode = data.code; // 恢复密钥
                 showPhone(data.phone);
                 startTimer(120 - elapsed);
                 startPolling();
-                document.getElementById('statusMsg').textContent = '页面已恢复，继续等待短信...';
+                document.getElementById('statusMsg').textContent = '页面已恢复，继续为您监听短信...';
             } else {
                 localStorage.removeItem('claude_order');
             }
         }
     };
 
+    // 🚀 请求号码
     async function requestNumber() {
-        if (localStorage.getItem('claude_ended') === '1') {
-            lockAll('服务已结束，请关闭页面。');
-            return;
-        }
-
-        const code = document.getElementById('codeInput').value.trim();
-        if (!code) {
-            document.getElementById('statusMsg').textContent = '❌ 请先输入授权码！';
-            return;
-        }
+        if (localStorage.getItem('claude_ended') === '1') return;
 
         const country = document.getElementById('countrySelect').value;
         const btn = document.getElementById('mainBtn');
         btn.disabled = true;
-        btn.textContent = '请求中...';
-        document.getElementById('statusMsg').textContent = '正在验证授权码...';
+        btn.textContent = '系统请求中...';
+        document.getElementById('statusMsg').textContent = '正在连接底层接口，请稍候...';
 
         try {
-            const res = await fetch(`/api/get-number?country=${country}&code=${encodeURIComponent(code)}`);
+            // 将内存里的授权码和选择的国家一起发给后端
+            const res = await fetch(`/api/get-number?country=${country}&code=${encodeURIComponent(userAuthCode)}`);
             const data = await res.json();
 
             if (data.phone) {
                 orderId = data.order_id;
-                document.getElementById('codeInput').disabled = true;
+                document.getElementById('countrySelect').disabled = true; // 获取号码后锁定国家下拉框
                 showPhone(data.phone);
+                
+                // 记在本地防刷新
                 localStorage.setItem('claude_order', JSON.stringify({
                     id: orderId,
                     phone: data.phone,
-                    code: code,
+                    code: userAuthCode,
                     time: Date.now()
                 }));
-                document.getElementById('statusMsg').textContent = '号码获取成功，请去填写！';
+                
+                document.getElementById('statusMsg').textContent = '号码获取成功！请立即填入 Claude！';
                 startTimer(120);
                 startPolling();
             } else {
-                document.getElementById('statusMsg').textContent = '❌ ' + (data.error || '获取失败');
+                document.getElementById('statusMsg').textContent = '❌ ' + (data.error || '该国家暂时无号，请更换国家重试');
                 btn.disabled = false;
                 btn.textContent = '获取号码';
             }
         } catch (e) {
-            document.getElementById('statusMsg').textContent = '网络错误，请稍后重试';
+            document.getElementById('statusMsg').textContent = '❌ 网络波动，请检查代理或重试';
             btn.disabled = false;
             btn.textContent = '获取号码';
         }
     }
 
+    // 📱 显示手机号和短信框
     function showPhone(num) {
-        document.getElementById('phoneArea').style.display = 'block';
-        document.getElementById('smsArea').style.display = 'block';
+        document.getElementById('phoneArea').classList.remove('hidden');
+        document.getElementById('smsArea').classList.remove('hidden');
         document.getElementById('phoneNumber').textContent = '+' + num;
-        document.getElementById('mainBtn').disabled = true;
-        document.getElementById('smsValue').textContent = '------';
+        document.getElementById('mainBtn').classList.add('hidden'); // 拿到号后隐藏获取按钮
     }
 
+    // ⏳ 倒计时
     function startTimer(sec) {
         countdown = sec;
         if (cdTimer) clearInterval(cdTimer);
         cdTimer = setInterval(() => {
             countdown--;
-            document.getElementById('smsLabel').textContent = `等待短信 (${countdown}s)`;
+            document.getElementById('smsLabel').textContent = `云端监听中 (${countdown}s)`;
             if (countdown <= 0) {
                 clearInterval(cdTimer);
                 clearInterval(pollTimer);
                 localStorage.removeItem('claude_order');
-                document.getElementById('statusMsg').textContent = '等待超时，授权码次数已扣除，请重新获取。';
-                document.getElementById('mainBtn').disabled = false;
-                document.getElementById('mainBtn').textContent = '重新获取';
-                document.getElementById('codeInput').disabled = false;
+                document.getElementById('statusMsg').textContent = '⚠️ 等待超时。请刷新网页重新验证并更换国家。';
+                document.getElementById('smsLabel').textContent = '监听已停止';
             }
         }, 1000);
     }
 
-function startPolling() {
+    // 📡 轮询查短信（已带防缓存时间戳）
+    function startPolling() {
         if (pollTimer) clearInterval(pollTimer);
         pollTimer = setInterval(async () => {
             try {
-                // 🌟 关键修复：加上 &_t=${Date.now()} 打破浏览器本地缓存！
                 const res = await fetch(`/api/get-sms?order_id=${orderId}&_t=${Date.now()}`);
                 const data = await res.json();
-                
                 if (data.status === 'ok') {
                     clearInterval(pollTimer);
                     clearInterval(cdTimer);
@@ -189,34 +220,30 @@ function startPolling() {
                     fetch(`/api/finish-order?order_id=${orderId}`);
                     localStorage.removeItem('claude_order');
                     localStorage.setItem('claude_ended', '1');
-                    lockAll('✓ 验证码已到达！服务结束，请关闭页面。');
+                    lockAll('✓ 验证码已送达！本次服务圆满结束，请妥善保存。');
                 }
-            } catch(e) {
-                console.log("查询验证码网络波动:", e);
-            }
+            } catch(e) {}
         }, 3000);
     }
 
+    // 🔒 完结锁死
     function lockAll(msg) {
         clearInterval(pollTimer);
         clearInterval(cdTimer);
-        const btn = document.getElementById('mainBtn');
-        btn.disabled = true;
-        btn.textContent = '服务已结束';
-        btn.style.background = '#6b7280';
         document.getElementById('countrySelect').disabled = true;
-        document.getElementById('codeInput').disabled = true;
-        if (msg) document.getElementById('statusMsg').textContent = msg;
-        window.onbeforeunload = () => '服务已结束，确定要离开？';
+        if (msg) {
+            const msgBox = document.getElementById('statusMsg');
+            msgBox.textContent = msg;
+            msgBox.style.color = 'var(--accent)';
+        }
     }
 
+    // 📋 复制号码
     function copyPhone() {
-        if (localStorage.getItem('claude_ended') === '1') return;
         const num = document.getElementById('phoneNumber').textContent;
         navigator.clipboard.writeText(num);
         const msg = document.getElementById('statusMsg');
-        msg.textContent = '号码已复制！';
-        setTimeout(() => msg.textContent = '请尽快在 Claude 填入此号码', 2000);
+        msg.textContent = '✅ 号码已复制！请粘贴至 Claude';
     }
 </script>
 </body>
